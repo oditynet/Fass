@@ -1,10 +1,11 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <EncButton.h>
 
 // Конфигурация NRF24L01
-#define CE_PIN 9
-#define CSN_PIN 10
+#define CE_PIN 7
+#define CSN_PIN 8
 RF24 radio(CE_PIN, CSN_PIN);
 const byte address[6] = "ROBOT";
 
@@ -14,7 +15,6 @@ const int LEFT_JOYSTICK_Y = A1;
 const int RIGHT_JOYSTICK_X = A2;
 const int RIGHT_JOYSTICK_Y = A3;
 
-// Структура для передачи данных
 struct RemoteData {
   int leftX;
   int leftY;
@@ -23,16 +23,21 @@ struct RemoteData {
 };
 
 // Параметры калибровки
-const int NEUTRAL_ZONE = 100;  // Зона нечувствительности
+const int NEUTRAL_ZONE = 50;  // Зона нечувствительности
 const int MIN_THRESHOLD = 400; // Нижний порог активации
 const int MAX_THRESHOLD = 600; // Верхний порог активации
 
+Button btn1(3);
+Button btn2(2);
+Button btn3(6);
+Button btn4(5);
+
 // Светодиод статуса
-const int STATUS_LED = 4;
+//const int STATUS_LED = 4;
 
 // Таймер для отправки данных
 unsigned long lastSendTime = 0;
-const int SEND_INTERVAL = 50; // Интервал отправки (мс)
+const int SEND_INTERVAL = 200; // Интервал отправки (мс)
 
 void setup() {
   Serial.begin(115200);
@@ -43,48 +48,54 @@ void setup() {
   pinMode(LEFT_JOYSTICK_Y, INPUT);
   pinMode(RIGHT_JOYSTICK_X, INPUT);
   pinMode(RIGHT_JOYSTICK_Y, INPUT);
-  
-  // Настройка светодиода
-  pinMode(STATUS_LED, OUTPUT);
-  digitalWrite(STATUS_LED, LOW);
-  
-  // Инициализация радио модуля
+
   radio.begin();
+  radio.setChannel(108); // Канал 108 (2.508 GHz)
+  radio.setDataRate(RF24_250KBPS); // Низкая скорость = стабильнее
+  radio.setPALevel(RF24_PA_MAX); // Макс. мощность
+  radio.setRetries(3, 5); // 3*250мкс задержка, 5 попыток
   radio.openWritingPipe(address);
-  radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
   
-  // Тестовый сигнал светодиодом
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(STATUS_LED, HIGH);
-    delay(100);
-    digitalWrite(STATUS_LED, LOW);
-    delay(100);
+  while (!radio.isChipConnected()) {
+    Serial.println("Ошибка: nRF24L01 не подключен!");
+    delay(1000);
   }
-  
+
   Serial.println("Пульт готов к работе");
 }
 
 void loop() {
   // Чтение значений с джойстиков
   RemoteData data;
-  data.leftX = analogRead(LEFT_JOYSTICK_X);
-  data.leftY = analogRead(LEFT_JOYSTICK_Y);
-  data.rightX = analogRead(RIGHT_JOYSTICK_X);
-  data.rightY = analogRead(RIGHT_JOYSTICK_Y);
-  
-  // Применение калибровки
-  applyCalibration(data);
+
+  btn1.tick();
+  btn2.tick();
+  btn3.tick();
+  btn4.tick();
+
+  //if (btn1.click()) Serial.println("btn 1 click!");
+  if (btn1.hold()) Serial.println("btn 1!");
+  if (btn2.hold()) Serial.println("btn 2!");
+  if (btn3.hold()) Serial.println("btn 3!");
+  if (btn4.hold()) Serial.println("btn 4!");
+  /*SensorData data = {
+    analogRead(A0),
+    analogRead(A1),
+    analogRead(A2),
+    analogRead(A3)
+  };*/
   
   // Отправка данных с заданным интервалом
   if (millis() - lastSendTime >= SEND_INTERVAL) {
+    data.leftX = analogRead(LEFT_JOYSTICK_X);
+    data.leftY = analogRead(LEFT_JOYSTICK_Y);
+    data.rightX = analogRead(RIGHT_JOYSTICK_X);
+    data.rightY = analogRead(RIGHT_JOYSTICK_Y);
+
+    applyCalibration(data);
     sendData(data);
     lastSendTime = millis();
-    
-    // Мигание светодиодом при отправке
-    digitalWrite(STATUS_LED, HIGH);
-    delay(5);
-    digitalWrite(STATUS_LED, LOW);
   }
   
   // Вывод значений в Serial для отладки
@@ -93,6 +104,7 @@ void loop() {
     printJoystickData(data);
     lastPrintTime = millis();
   }
+  delay(100);
 }
 
 // Применение калибровки и зоны нечувствительности
@@ -118,21 +130,7 @@ int mapAndFilter(int value) {
 // Отправка данных роботу
 void sendData(RemoteData data) {
   bool result = radio.write(&data, sizeof(data));
-  
-  if (result) {
-    // Успешная отправка
-    digitalWrite(STATUS_LED, HIGH);
-    delay(1);
-    digitalWrite(STATUS_LED, LOW);
-  } else {
-    // Ошибка отправки
-    for (int i = 0; i < 3; i++) {
-      digitalWrite(STATUS_LED, HIGH);
-      delay(50);
-      digitalWrite(STATUS_LED, LOW);
-      delay(50);
-    }
-  }
+  //Serial.print(result ? "[+]" : "[-]");
 }
 
 // Вывод данных джойстиков в Serial
