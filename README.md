@@ -6,6 +6,8 @@
 
 <img src="https://github.com/oditynet/Fass/blob/main/jostic/jostic-info.png" title="example" width="800" />
 
+<img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic.png" title="example" width="800" />
+
 
 Основные особенности реализации:
    1) Управление:
