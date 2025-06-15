@@ -1,18 +1,18 @@
 
 #include <Wire.h>
+#include <math.h>
 #include <Adafruit_PWMServoDriver.h>
 Adafruit_PWMServoDriver pwm1 = Adafruit_PWMServoDriver();
 
 int spd = 500;
 
-int cal_L1 = 1; //1 = home  2 = run 
-int cal_L2 = 1; //1 = home  2 = run 
+int cal_L1 = 0; //1 - calibre
+int cal_L2 = 0; //1 - calibre
 
 int L1=108;
 int L2=130;
-int C,H;
 
-float homeX, homeZ;
+double homeX, homeZ;
 
 //RF
 uint8_t servonum1 = 0; //колено
@@ -25,10 +25,28 @@ uint8_t servonum2 = 1; //бедро
 #define SERVOMAX2  600
 #define SERVOHOME2  330//249//330//499//370  249-0 гр
 
+double _acos(double x) {
+  // Проверка границ входа
+  if (x <= -1.0f) return PI;
+  if (x >= 1.0f) return 0.0f;
+  
+  // Аппроксимация рядом Тейлора (оптимизированная)
+  double negate = (x < 0) ? 1.0f : 0.0f;
+  x = abs(x);
+  
+  double ret = -0.0187293f;
+  ret = ret * x;
+  ret = ret + 0.0742610f;
+  ret = ret * x;
+  ret = ret - 0.2121144f;
+  ret = ret * x;
+  ret = ret + 1.5707288f;
+  ret = ret * sqrt(1.0f - x);
+  ret = ret - 2 * negate * ret;
+  return negate * PI + ret;
+}
 
-
-
-float realangleToPulse(float angle, int minPulse, int maxPulse, float minAngle = 0, float maxAngle = 180) {
+double realangleToPulse(double angle, int minPulse, int maxPulse, double minAngle = 0, double maxAngle = 180) {
     if (minPulse > maxPulse) {
         return maxPulse + (minPulse - maxPulse) * (1 - angle/180.0);
     }
@@ -36,88 +54,93 @@ float realangleToPulse(float angle, int minPulse, int maxPulse, float minAngle =
 }
 
 // Преобразование импульса в угол с учетом реального диапазона
-float realpulseToAngle(int pulse, int minPulse, int maxPulse, float minAngle = 0, float maxAngle = 180) { 
+double realpulseToAngle(int pulse, int minPulse, int maxPulse, double minAngle = 0, double maxAngle = 180) { 
     if (minPulse > maxPulse) {
         return 180.0 - 180.0 * (pulse - maxPulse) / (minPulse - maxPulse);
     }
     return 180.0 * (pulse - minPulse) / (maxPulse - minPulse);
 }
 
-void forwardKinematics(int hipPulse, int kneePulse, float &x, float &z) {
-  float kneeAngle = realpulseToAngle(kneePulse, SERVOMIN1, SERVOMAX1);
-  float hipAngle = realpulseToAngle(hipPulse, SERVOMIN2, SERVOMAX2); 
-  if (hipAngle > 45.57){
-    hipAngle = hipAngle -45.57; // чтоб локоть не поднимался выше Z>0 45.57 это импульсы от 130 до 249 !!! в inverseKinematics +119=249-130 еще сделать
-    Serial.println("-45.57");
-    if (hipAngle > 0){ // жуе работает дл 330
-      hipAngle=-1*hipAngle;
-    }
-  }
-  
-  Serial.print("kneePulse=");Serial.print(kneePulse);Serial.print(" hipPulse=");Serial.println(hipPulse);
+void forwardKinematics(int hipPulse, int kneePulse, double &x, double &z) {
+  double b = realpulseToAngle(kneePulse, SERVOMIN1, SERVOMAX1);
+  double a = realpulseToAngle(hipPulse, SERVOMIN2, SERVOMAX2);
 
-  Serial.print("Угол колена: "); Serial.print(kneeAngle);  Serial.print("° | Угол бедра: "); Serial.print(hipAngle); Serial.print("° ");
+  //Serial.print("a=");Serial.print(a);Serial.print(" b=");Serial.println(b);
+  //double P1 = (600-130)/180; //1 пульс = 2,61 градусам
 
-  // Переводим углы в радианы для тригонометрии
-  float kneeRad = radians(kneeAngle);
-  float hipRad = radians(hipAngle);
+  double b_Rad = radians(b);
+  double a_Rad = radians(a);
+  double x1,z1;
+  
+  a_Rad = radians(45.5744 - a);
+  x1 = L1 * cos(a_Rad);
+  z1 = L1 * sin(a_Rad);
+  
+  x = x1 + L2 * cos((a_Rad - b_Rad));
+  z = z1 + L2 * sin((a_Rad - b_Rad));
 
-  //Serial.print("Ra1: "); Serial.print(kneeRad);  Serial.print(" Ra2: "); Serial.println(hipRad);
-  
-  // Корректный расчет координат
-  float x1 = L1 * cos(hipRad);
-  float z1 = L1 * sin(hipRad);
-  
-  x = x1 + L2 * cos( (hipRad - kneeRad));
-  z = z1 + L2 * sin( (hipRad - kneeRad));
-  
-  Serial.print("x1="); Serial.print(x1);
+  /*Serial.print("x1="); Serial.print(x1);
   Serial.print(" z1="); Serial.print(z1);
-  Serial.print(" x=");  Serial.print(x); Serial.print(" z="); Serial.println(z);
+  Serial.print(" x=");  Serial.print(x); Serial.print(" z="); Serial.println(z);*/
 }
 
-bool inverseKinematics(float targetX, float targetZ, int &hipPulse, int &kneePulse) {
-    // Рассчитываем расстояние до цели
-    float distance = sqrt(targetX*targetX + targetZ*targetZ);
-    
-    // Проверка достижимости точки
-    if (distance > L1 + L2 || distance < abs(L1 - L2)) {
+bool inverseKinematics(double X, double Z, int &hipPulse, int &kneePulse) {
+  double D = sqrt(X*X+Z*Z);
+  //Serial.print("D=");Serial.println(D);
+  if (D > L1 + L2 || D < abs(L1 - L2)) {
         Serial.println("Точка недостижима");
         return false;
-    }
-    float Q11 = acos( targetX/distance ) ;
-    float Q12 = acos( (L1*L1 - L2*L2 + distance*distance) / (2*distance*L1) );
-    float Q1 = Q11-Q12;
-    float Q2 = acos( (L1*L1 + L2*L2 - distance*distance) / (2*L1*L2)  );
-    
-    
-    
-    Serial.println("___");
+  }
+  double a,b,g,t,k;
+  double _const =  45.5744;//(180/(600-130)) * (249-130);
+  b = M_PI - acos((L2*L2+L1*L1-D*D)/(2*L2*L1));
+
+  if (X >= 0 && Z <= 0){ // 1 случай
+    //Serial.println("[2]");
+    t=acos((L1*L1-L2*L2+D*D)/(2*L1*D));
+    k=acos(abs(X)/D);
+    a = k-t+45.5744/57.29577; //+
+  }
+  else if (X >= 0 && Z >= 0){
+    //Serial.println("[1]");
+    k = acos(X/D);
+    t = acos((L1*L1+D*D-L2*L2)/(2*L1*D));
+    a = abs(45.5744/57.29577 - k - t);  //+
+  }
+  else if (X <= 0 && Z >= 0){
+   // Serial.println("[4]");
+    a = PI - acos((D*D + L1*L1 - L2*L2)/(2*L1*D));
+  }
+  else if (X <= 0 && Z <= 0){
+    //Serial.println("[3]");
+    //double tmp = _const / 57.29577;
+    a = PI - (acos(abs(X)/D) - 45.5744/57.29577) - acos((D*D + L1*L1 - L2*L2)/(2*L1*D));
+  }
+  else{
+    Serial.println("[!] Not calculate");
+    return false;
+  }
+  //Serial.println("угол: ");
+  //Serial.println(a*57.29577);
+  //Serial.println(b*57.29577);
   
-    //Serial.println(degrees(Q11));
-    //Serial.println(degrees(Q12));
-    /*Serial.println(degrees(Q1));
-    Serial.println(degrees(Q2));
-    Serial.println(realangleToPulse(degrees(Q1),SERVOMIN1, SERVOMAX1)+119); // 130-249 Это чтоб Z>0  не поднимал локоть!!!!!!!
-    Serial.println(realangleToPulse(degrees(Q2),SERVOMIN2, SERVOMAX2));*/
-    float kneeAngle = degrees(Q2);
-    float hipAngle = degrees(Q1);
-    // Преобразование углов в импульсы
-    kneePulse = realangleToPulse(kneeAngle, SERVOMIN1, SERVOMAX1);
-    hipPulse = realangleToPulse(hipAngle, SERVOMIN2, SERVOMAX2)+119;// 130-249 Это чтоб Z>0  не поднимал локоть!!!!!!!
-    
-    return true;
+  double rad_a = degrees(a);//-0.795423467); // это 45.5744 градусов
+  double rad_b = degrees(b);
+
+  kneePulse = realangleToPulse(rad_b, SERVOMIN1, SERVOMAX1);
+  hipPulse = realangleToPulse(rad_a, SERVOMIN2, SERVOMAX2);
+  return true;
 }
 
-void moveLeg(bool forward) {
+void moveLeg(bool forward,int STEP_DURATION,double STEP_LENGTH,double STEP_HEIGHT) {
   
-  const float STEP_LENGTH = 100.0;  // Длина шага (мм)
-  const float STEP_HEIGHT = 80.0;  // Высота подъема (мм)
-  const int STEP_DURATION = 2000;  // Длительность шага (мс)
+  /*const double STEP_LENGTH = 100.0;  // Длина шага (мм)
+  const double STEP_HEIGHT = 60.0;  // Высота подъема (мм)
+  const int STEP_DURATION = 1000;  // Длительность шага (мс)*/
   const int NUM_STEPS = 30;        // Количество промежуточных точек
-  float x,z;
+  double x,z;
   for (int i = 0; i <= NUM_STEPS; i++) {
-    float t = (float)i / NUM_STEPS;
+    double t = (double)i / NUM_STEPS;
     
     // Фаза переноса (ПОДЪЕМ ноги)
     if (forward) {
@@ -125,23 +148,40 @@ void moveLeg(bool forward) {
     } else {
       x = homeX - STEP_LENGTH * (1 - cos(PI * t)) / 2;
     }
-    z = homeZ + STEP_HEIGHT * sin(PI * t)/2; // Уменьшаем Z для подъема!
+    z = homeZ + STEP_HEIGHT * sin(PI * t)/2; 
     
     // Отладочный вывод
-    Serial.print("Target: X="); Serial.print(x);
-    Serial.print(" Z="); Serial.println(z);
+    //Serial.print("Target: X="); Serial.print(x);
+    //Serial.print(" Z="); Serial.println(z);
     moveToPoint(x,z);
 
     delay(STEP_DURATION / (2 * NUM_STEPS));
   }
+  double tmp;
+  if (x > homeX) {
+    tmp =  x - homeX;
+  } else {
+    tmp = homeX - x;
+  }
+  //2 фаза: возврат назад
+  for (int i = 0; i <= NUM_STEPS; i++) {
+   
+    if (forward) {
+      x = x - tmp / NUM_STEPS;
+    } else {
+      x = x + tmp / NUM_STEPS; 
+    }
+    moveToPoint(x,z);
+    delay(STEP_DURATION / (2 * NUM_STEPS));
+  }
 }
 
-bool moveToPoint(float targetX, float targetZ) {
+bool moveToPoint(double targetX, double targetZ) {
   int hipPulse, kneePulse;
   
   if (inverseKinematics(targetX, targetZ, hipPulse, kneePulse)) {
     // Управление сервоприводами
-    Serial.print("PulseX=");Serial.print(hipPulse);Serial.print(" PulseZ=");Serial.println(kneePulse);
+    //Serial.print("PulseX=");Serial.print(hipPulse);Serial.print(" PulseZ=");Serial.println(kneePulse);
     pwm1.setPWM(servonum2, 0, hipPulse);
     pwm1.setPWM(servonum1, 0, kneePulse);
     return true;
@@ -160,47 +200,36 @@ void setup() {
   pwm1.setOscillatorFrequency(25000000);
   pwm1.setPWMFreq(60);
 
-
   if (cal_L1) {
+    //pwm1.setPWM(servonum1, 0, SERVOHOME1);
+    pwm1.setPWM(servonum1, 0, 130);
+    delay(3000);
+    pwm1.setPWM(servonum1, 0, 600);
+    delay(3000);
+  }else{
     pwm1.setPWM(servonum1, 0, SERVOHOME1);
   }
+  
   if (cal_L2) {
+    //pwm1.setPWM(servonum2, 0, SERVOHOME2);
+    pwm1.setPWM(servonum2, 0, 130);
+    delay(3000);
+    pwm1.setPWM(servonum2, 0, 600);
+    delay(3000);
+  }else{
     pwm1.setPWM(servonum2, 0, SERVOHOME2);
   }
-  delay(1000);
-  float x, z;
+
+  
+  double x, z;
   forwardKinematics(SERVOHOME2, SERVOHOME1, x, z);
-  //moveToPoint(x,z);
-  //moveToPoint(25,-102.69);
-  //forwardKinematics(323, 417, x, z);
-  //while(true){}
-  
-  //forwardKinematics(SERVOHOME2, SERVOHOME1, x, z);
- // float distance = sqrt(x*x + z*z);
-
-  homeX=x;homeZ=z;
-  //moveLeg(true);
-  
-  /*moveToPoint(-25,-167);
   delay(500);
-  moveToPoint(25,-167);
-*/
-  //moveToPoint(-104,-102.69);
-  //delay(500);
-  //forwardKinematics(SERVOHOME2, SERVOHOME1, x, z);
-  //delay(1000);
-   //x=x+20;
-  //for (int i=0;i<100; i+=5) {
-    //forwardKinematics(SERVOHOME2, SERVOHOME1, x, z);
-    //Serial.print(x+i);Serial.print(":");Serial.println(z);
-   // delay(500);
-  //}
-   // delay(600);
-
+  //moveToPoint(x,z);
+  homeX=x;homeZ=z;
   //while(true){}
 }
 
 
 void loop() {
-  moveLeg(false);
+  moveLeg(false,1000,100,80); // false - вперед
 }
