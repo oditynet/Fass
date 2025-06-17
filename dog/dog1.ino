@@ -281,7 +281,7 @@ void heightchangeleftleg(int hight){
 }
 
 void heightchangerightleg(int hight){
-for (int i = 0 ; i <  hight; i++){
+  for (int i = 0 ; i <  hight; i++){
     if (hight >= 0){ //ВВЕРХ
       heightchange1legonstep(1,legspos[1][1] + i);
       legspos[1][1] = legspos[1][1] + i;
@@ -346,6 +346,25 @@ void heightchangebackleg(int hight){
   }
 }
 
+void gohome(){  // от любого положения до домашних позиций. TODO - проверять знаки!!!
+  int count = 20; 
+  int x,z;
+  int delta[1][2];
+  for (int i=0; i< NUM_LEGS; i++){
+    forwardKinematics(leg,legs[i][1][4], legs[i][2][4], x, z); // HOME x,y
+    delta[i][0] = x - legspos[i][0];
+    delta[i][1] = z - legspos[i][1];
+  }
+  for (int i=0; i< NUM_LEGS; i++){
+    float stepx =  delta[i][0] / count;
+    float stepy =  delta[i][0] / count;
+    moveToPoint(i,legspos[i][0]+stepx, legspos[i][1]+stepz,legs[i][1][0], legs[i][2][0] ) ;
+    legspos[i][0] += stepx;
+    legspos[i][1] += stepz;
+    legspos[i][2] += stepz;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Start...");
@@ -372,15 +391,17 @@ void setup() {
   //while(true){}
 }
 
-
 void loop() {
   stepalllegs(false,2000); // Идти вперед
   delay(500);
+  gohome();
+  
+  delay(500);
   stepalllegs(true,2000); // Идти назад
   delay(500);
-  heightchange4leg(230); //Поднять 4 лапы выше
+  heightchange4leg(30); //Поднять 4 лапы выше
   delay(500);
-  heightchange4leg(180); // Опустить 4 лапы ниже
+  heightchange4leg(-30); // Опустить 4 лапы ниже
   delay(500);
 
   unsigned long currentMillis = millis(); 
