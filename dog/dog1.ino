@@ -1,4 +1,4 @@
-
+#include <Thread.h>  
 #include <Wire.h>
 #include <math.h>
 #include <Adafruit_PWMServoDriver.h>
@@ -36,6 +36,11 @@ float legspos[4][3] = { //X;Y , Height
   {0, 0, 200},  // RL
   {0, 0, 200}   // RR
 };
+
+Thread t1 = Thread();
+void getjosstic(){
+  int a=1;
+}
 
 double realangleToPulse(double angle, int minPulse, int maxPulse, double minAngle = 0, double maxAngle = 180) {
     if (minPulse > maxPulse) {
@@ -348,16 +353,16 @@ void heightchangebackleg(int hight){
 
 void gohome(){  // от любого положения до домашних позиций. TODO - проверять знаки!!!
   int count = 20; 
-  int x,z;
+  double x,z;
   int delta[1][2];
   for (int i=0; i< NUM_LEGS; i++){
-    forwardKinematics(leg,legs[i][1][4], legs[i][2][4], x, z); // HOME x,y
+    forwardKinematics(i,legs[i][1][4], legs[i][2][4], x, z); // HOME x,y
     delta[i][0] = x - legspos[i][0];
     delta[i][1] = z - legspos[i][1];
   }
   for (int i=0; i< NUM_LEGS; i++){
     float stepx =  delta[i][0] / count;
-    float stepy =  delta[i][0] / count;
+    float stepz =  delta[i][0] / count;
     moveToPoint(i,legspos[i][0]+stepx, legspos[i][1]+stepz,legs[i][1][0], legs[i][2][0] ) ;
     legspos[i][0] += stepx;
     legspos[i][1] += stepz;
@@ -404,9 +409,12 @@ void loop() {
   heightchange4leg(-30); // Опустить 4 лапы ниже
   delay(500);
 
+  if (t1.shouldRun())
+        t1.run();
+  /*  АНАЛОГ
   unsigned long currentMillis = millis(); 
-  if (currentMillis - previousMilli >= loop_interval){
+  if (currentMillis - previousMillis >= loop_interval){
      previousMillis = currentMillis;
      // чтение данных с джостика
-  }
+  }*/
 }
