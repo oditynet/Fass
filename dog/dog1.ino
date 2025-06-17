@@ -19,19 +19,10 @@ const int SHOULDER = 0, HIP = 1, KNEE = 2; // Индексы суставов
 
 const int STEP_LENGTH = 80; //длина шага
 const int STEP_HEIGHT = 40; //высота шага
-//const int STEP_DURATION = 2000; //скорость шага
 
-//RF
-/*uint8_t servonum1 = 0; //колено
-#define SERVOMIN1  130
-#define SERVOMAX1  600
-#define SERVOHOME1  365//350//125//250  365-90
+unsigned long previousMillis = 0;  // время хранения loop
+const long loop_interval = 500; // время проверки данных с джостика
 
-uint8_t servonum2 = 1; //бедро
-#define SERVOMIN2  130
-#define SERVOMAX2  600
-#define SERVOHOME2  330//249//330//499//370  249-0 гр
-*/
 const int legs[4][3][4] = {
   {{0, 130 ,600, 365}, {1, 130 ,600, 330}, {2,130, 600, 375}},   // FL плечо,бедро,локоть    
   {{3, 130 ,600, 365}, {4, 130 ,600, 330}, {5,130, 600, 375}},   // FR
@@ -391,4 +382,10 @@ void loop() {
   delay(500);
   heightchange4leg(180); // Опустить 4 лапы ниже
   delay(500);
+
+  unsigned long currentMillis = millis(); 
+  if (currentMillis - previousMilli >= loop_interval){
+     previousMillis = currentMillis;
+     // чтение данных с джостика
+  }
 }
