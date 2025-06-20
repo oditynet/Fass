@@ -22,10 +22,11 @@
 
 Вот видео старой логики движения кинематики. Новая же работает очень точно и учитывает все возможные состояния.
 
-<img src="https://github.com/oditynet/Fass/blob/main/leg.gif" title="example" width="800" />
+<img src="https://github.com/oditynet/Fass/blob/main/leg.gif" title="leg" width="800" />
 
-<img src="https://github.com/oditynet/Fass/blob/main/jostic/jostic-info.png" title="example" width="800" />
+<img src="https://github.com/oditynet/Fass/blob/main/jostic/jostic-info.png" title="jostic" width="800" />
 
+<img src="https://github.com/oditynet/Fass/blob/main/dog//fass.jpg" title="fass" width="800" />
 
 Основные особенности реализации:
    1) Управление:
