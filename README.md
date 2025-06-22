@@ -1,29 +1,29 @@
-# FASS   - ПРОЕКТ В РАЗРАБОТКЕ
+# FASS - PROJECT IN DEVELOPMENT
 
-Робот на ардуино и сервоприводах с 2 степенями свободы.
+Robot on Arduino and servos with 2 degrees of freedom.
 
-# Теория:
-Прямая и обратная кинематика:
+# Theory:
+Forward and inverse kinematics:
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic.png" title="example" width="800" />
 
-Прямая кинематика - это зная импульсы найти координаты конечной точки X;Y.
+Forward kinematics is knowing the impulses to find the coordinates of the end point X;Y.
 
-Для первого плеча:
+For the first arm:
 
-  - x1 = L1 * cos(a);
-  - z1 = L1 * sin(a);
-    
-Для второго плеча. Знак минус потому что колено смотрит вниз и для получения второго угла надо из первого вычесть:
+- x1 = L1 * cos(a);
+- z1 = L1 * sin(a);
 
-   - x = x1 + L2 * cos((a - b));
-   - z = z1 + L2 * sin((a - b));
+For the second arm. The minus sign is because the knee is pointing down and to get the second angle, you need to subtract from the first:
 
-Обратная кинематика - это по координатам X;Y найти углы (импульсы двигателя). На графике нарисовано 4 возможных положения лапы и следовательно 4 разных способа вычисления. Угол t у нас всегда постоянный (равен 45.5744 градусов),т.к. сервопривод может крутиться от 0 до 180 граусов (130 - 600 импульсов) и для мотора эта прямая считается абсциссой. Для исследователя же абсциссой является прямая Х. Arduino работает с радианами (1 рад = 57.29577 градусов ) и по этому приходится переводить значения. 
+- x = x1 + L2 * cos((a - b));
+- z = z1 + L2 * sin((a - b));
 
-Такая же кинематика и для движения лапы в сторону для поворота . разворота . хождения боком. Задача найти угол y_c и на какую высоту компнсировать подъем лапы на высоту z_H
+Inverse kinematics is to find angles (motor impulses) by X;Y coordinates. The graph shows 4 possible positions of the paw and therefore 4 different calculation methods. The angle t is always constant (equal to 45.5744 degrees), since the servo can rotate from 0 to 180 degrees (130 - 600 impulses) and for the motor this line is considered the abscissa. For the researcher, the abscissa is the X line. Arduino works with radians (1 rad = 57.29577 degrees) and therefore it is necessary to translate the values.
+
+The same kinematics is for the movement of the paw to the side for turning. turning. walking sideways. The task is to find the angle y_c and to what height to compensate for the paw lift to the height z_H
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic-side.png" title="example" width="800" />
 
-Вот видео старой логики движения кинематики. Новая же работает очень точно и учитывает все возможные состояния.
+Here is a video of the old kinematics motion logic. The new one works very accurately and takes into account all possible states.
 
 <img src="https://github.com/oditynet/Fass/blob/main/leg.gif" title="leg" width="800" />
 
@@ -31,30 +31,30 @@
 
 <img src="https://github.com/oditynet/Fass/blob/main/dog//fass.jpg" title="fass" width="800" />
 
-Основные особенности реализации:
-   1) Управление:
-      - Радиоуправление через NRF24L01
-      - Автоматический приоритет датчиков
-   2) Алгоритмы движения:
-       - Плавная ходьба вперед/назад
-       - Повороты на месте
-       - Автоматический возврат в нейтральное положение
-       - Регулируемая скорость движения
-   3) Обратная кинематика:
-       - Точный расчет углов суставов
-       - Учет конструктивных ограничений
-       - Плавное перемещение ног
-   4) Система безопасности:
-       - Ограничители для сервоприводов
-       - Плавные переходы между состояниями
+Main features of the implementation:
+1) Control:
+- Radio control via NRF24L01
+- Automatic sensor priority
+2) Movement algorithms:
+- Smooth walking forward/backward
+- Turns on the spot
+- Automatic return to neutral position
+- Adjustable movement speed
+3) Inverse kinematics:
+- Accurate calculation of joint angles
+- Taking into account design constraints
+- Smooth movement of legs
+4) Safety system:
+- Limiters for servos
+- Smooth transitions between states
 
-Требования к аппаратному обеспечению:
-   - Arduino nano
-   - Модуль NRF24L01
-   - PCA9685 (драйвер сервоприводов)
-   - 12 сервоприводов (3 на каждую ногу)
-   - MPU6050 (гироскоп/акселерометр)
-   - 2 датчика HC-SR04 (ультразвуковые дальномеры)
-   - Пульт управления с двумя джойстиками KY-023 и NRF24L01
-   
-origin project STL: https://novaspotmicro.com/parts-list.html c переработкой на метрическую систему и моим функционал.ПО написано с нуля, обратная кинематика разработана и написана с нуля. Алгоритм мой.
+Hardware requirements:
+- Arduino nano
+- NRF24L01 module
+- PCA9685 (servo driver)
+- 12 servos (3 for each leg)
+- MPU6050 (gyroscope / accelerometer)
+- 2 HC-SR04 sensors (ultrasonic rangefinders)
+- Remote control with two joysticks KY-023 and NRF24L01
+
+origin project STL: https://novaspotmicro.com/parts-list.html with conversion to the metric system and my functionality. The software is written from scratch, inverse kinematics is developed and written from scratch. The algorithm is mine.
