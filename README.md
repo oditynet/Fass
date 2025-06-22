@@ -27,7 +27,7 @@ The same kinematics is for the movement of the paw to the side for turning. turn
 
 There are 2 types of steps in walking:
 
-1) 2x2 - 1.4 paws move forward at the same time and then 2.3. The algorithm is successful when the dog's body is perfectly centered
+1) 2x2 - 1, 4 paws move forward at the same time and then 2, 3. The algorithm is successful when the dog's body is perfectly centered
 2) 1x3 - the step cycle is divided into 4 stages (by the number of paws). The first paw moves forward in 1/4 of the period, and the other 3 continue to move backward. In the second period, 2/4, the second paw moves forward, and the others continue to move backward, and so on in a circle.
 
 In my project, the center of gravity is unstable, so I chose option 2.
