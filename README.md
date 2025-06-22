@@ -23,6 +23,15 @@ Inverse kinematics is to find angles (motor impulses) by X;Y coordinates. The gr
 The same kinematics is for the movement of the paw to the side for turning. turning. walking sideways. The task is to find the angle y_c and to what height to compensate for the paw lift to the height z_H
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic-side.png" title="example" width="800" />
 
+# Step theory:
+
+There are 2 types of steps in walking:
+
+1) 2x2 - 1.4 paws move forward at the same time and then 2.3. The algorithm is successful when the dog's body is perfectly centered
+2) 1x3 - the step cycle is divided into 4 stages (by the number of paws). The first paw moves forward in 1/4 of the period, and the other 3 continue to move backward. In the second period, 2/4, the second paw moves forward, and the others continue to move backward, and so on in a circle.
+
+In my project, the center of gravity is unstable, so I chose option 2.
+
 Here is a video of the old kinematics motion logic. The new one works very accurately and takes into account all possible states.
 
 <img src="https://github.com/oditynet/Fass/blob/main/leg.gif" title="leg" width="800" />
