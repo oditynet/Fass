@@ -35,7 +35,7 @@ In my project, the center of gravity is unstable, so I chose option 2.
 # HARDWARE LIST 
  1) Сервопривод SPT5435LV 35 кг                - 12 шт
  2) Понижающий регулятор напряжения на 10А     - 1 шт
- 3) Arduino nano                               - 1 шт
+ 3) Arduino nano                               - 2 шт
  4) LM2596S-ADJ                                - 1 шт
  5) Подшипник фланцевый F688 ZZ                - 8 шт
  6) DS-212                                     - 5 шт
@@ -44,7 +44,7 @@ In my project, the center of gravity is unstable, so I chose option 2.
  9) HC-SR04                                    - 2 шт
  10) PCA9685                                   - 1 шт
  11) NRF24L01                                  - 2 шт
- 12) LIPO 7.4V класс от 20С                    - 1 шт
+ 12) LIPO 7.4V(ваш выбор) класс от 20С         - 2 шт
  13) болты и гайки M3                          - пакет на 100 шт
   
 Here is a video of the old kinematics motion logic. The new one works very accurately and takes into account all possible states.
