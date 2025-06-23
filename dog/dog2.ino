@@ -9,9 +9,16 @@
 #include <Adafruit_PWMServoDriver.h>
 Adafruit_PWMServoDriver pwm1 = Adafruit_PWMServoDriver();
 
+#define TRIG1 2
+#define ECHO1 3
+#define TRIG2 5
+#define ECHO2 4
+
 // Конфигурация NRF24L01
 #define CE_PIN   7
 #define CSN_PIN 8
+
+
 const byte thisSlaveAddress[4] = {'F','A','S','S'};
 RF24 radio(CE_PIN, CSN_PIN);
 
@@ -63,7 +70,23 @@ float legspos[4][4] = { //X, Z, Height, Y
   {0, 0, 220, 0}   // RR
 };
 
-Thread gefromjosticdata = Thread();
+//Thread gefromjosticdata = Thread();
+
+float getDistance(int trigPin, int echoPin) {
+  // Генерируем импульс 10 мкс
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Измеряем длительность импульса
+  long duration = pulseIn(echoPin, HIGH);
+  
+  // Рассчитываем расстояние (см)
+  //return duration * 0.034 / 2;
+   return duration / 58;
+}
 
 void processRemoteData(RemoteData data) {
   // Движение вперед/назад/повороты
@@ -664,8 +687,14 @@ void setup() {
   radio.startListening();
   Serial.println("NRF24L01 инициализирован");
 
-  gefromjosticdata.onRun(readRemoteData);  // назначаем потоку задачу
-  gefromjosticdata.setInterval(1000);
+   //Лидар 2 шт
+  pinMode(TRIG1, OUTPUT);
+  pinMode(ECHO1, INPUT);
+  pinMode(TRIG2, OUTPUT);
+  pinMode(ECHO2, INPUT);
+
+  //gefromjosticdata.onRun(readRemoteData);  // назначаем потоку задачу
+  //gefromjosticdata.setInterval(1000);
   
  // pwm1.setPWM(0, 0, 350);
 
@@ -724,8 +753,12 @@ pwm1.setPWM(4, 0, 600);*/
   //move1Leg(false,5000,60,40 ,5,6 , legspos[1][0], legspos[1][1],1);
   //delay(1500);
  // moveToPoint(1,-120, -170, 5,6);
- delay(1000);
-step1legtoside(true,0,160);
+ 
+ 
+  //delay(1000);
+  //step1legtoside(true,0,160);
+
+
 
   //moveToPoint(1,-20, -170, 5,6);
   //move1Leg(false,5000,50,40 ,5,6 , legspos[1][0], legspos[1][1],1);
@@ -740,11 +773,22 @@ step1legtoside(true,0,160);
  // delay(1000);
   //heightchangebackleg(-40);
  // heightchange1legonstep(1,40);
-  while(true){}
+  //while(true){}
 }
 
 void loop() {
-  for (int i=0;i< 10;i++){
+
+  float dist1 = getDistance(TRIG1, ECHO1);
+  float dist2 = getDistance(TRIG2, ECHO2);
+  
+  Serial.print("Left: ");
+  Serial.print(dist1);
+  Serial.print(" cm | Right: ");
+  Serial.print(dist2);
+  Serial.println(" cm");
+  delay(200);
+
+  /*for (int i=0;i< 10;i++){
   delay(7);
   step4legs(false,700); // технология 1х3
   }
@@ -755,7 +799,7 @@ void loop() {
   for (int i=0;i< 10;i++){
   delay(7);
   step4legs(false,200); // технология 1х3
-  }
+  }*/
   //stepalllegs(false,1000,0); // технология 2х2
 //move1Leg(false,30,80,40 ,5,6 , legspos[3][0], legspos[3][1],3);
   //if (gefromjosticdata.shouldRun())
