@@ -31,8 +31,9 @@ struct RemoteData {
 
 //int spd = 50;
 
-int L1=108;
-int L2=130;
+int L0 = 38;
+int L1 = 108;
+int L2 = 130;
 
 //double homeX, homeZ;
 
@@ -340,7 +341,7 @@ int changeleg(int leg) {
 
 void step4legs(bool forward, int STEP_DURATION, int len4step = 150) {
     const int NUM_SECTIONS = 4;
-    const int STEPS_PER_SECTION = 20; // Фиксированное количество шагов на секцию
+    const int STEPS_PER_SECTION = 10; // Фиксированное количество шагов на секцию
     const float SECTION_DURATION = STEP_DURATION / (float)NUM_SECTIONS;
     const float TIME_PER_STEP = SECTION_DURATION / STEPS_PER_SECTION;
     const float SECTION_LENGTH = len4step / (float)NUM_SECTIONS;
@@ -372,15 +373,17 @@ void step4legs(bool forward, int STEP_DURATION, int len4step = 150) {
                     moveToPoint(l, x, z, legs[l][1][0], legs[l][2][0]);
                     legspos[l][0] = x;
                     legspos[l][1] = z;
+                    delay(TIME_PER_STEP/(4*10));//быстрее
                 } else {
                     // Траектория опорных ног (прямая с компенсацией)
                     float compensation = (forward ? -1 : 1) * SECTION_LENGTH * t / 3.0f;
                     float x = start_positions[l][0] + compensation;
                     moveToPoint(l, x, start_positions[l][1], legs[l][1][0], legs[l][2][0]);
                     // Не обновляем legspos здесь - только в конце секции
+                    delay(TIME_PER_STEP/4);
                 }
             }
-            delay(TIME_PER_STEP);
+            //delay(TIME_PER_STEP);
         }
 
         // Финализируем позиции после секции
@@ -407,6 +410,15 @@ void step4legs(bool forward, int STEP_DURATION, int len4step = 150) {
         // Переключаем активную ногу
         active_leg = changeleg(active_leg);
     }
+}
+
+void step1legtoside(bool left, int leg,int len){
+  double ab = (left ? 1 : -1)*(atan(len/abs(legspos[leg][1])) + atan((L1+L2)/L0));
+  Serial.println(ab);
+  //double rad_ab = degrees(ab);
+  double shoulder = realangleToPulse(degrees(ab), legs[leg][0][1], legs[leg][0][2]);// +(left ? 1 : -1)*legs[leg][0][3];
+  Serial.println(shoulder);
+  pwm1.setPWM(legs[leg][0][0], 0, shoulder);
 }
 
 void step2legs(bool forward, int legF, int legR, int homeX, int homeZ, int homeX1, int homeZ1, int STEP_DURATION) {
@@ -713,6 +725,8 @@ pwm1.setPWM(4, 0, 600);*/
   //delay(1500);
  // moveToPoint(1,-120, -170, 5,6);
  delay(1000);
+step1legtoside(true,0,160);
+
   //moveToPoint(1,-20, -170, 5,6);
   //move1Leg(false,5000,50,40 ,5,6 , legspos[1][0], legspos[1][1],1);
   //move1Leg(false,5000,50,40 ,5,6 , legspos[1][0], legspos[1][1],1);
@@ -726,12 +740,22 @@ pwm1.setPWM(4, 0, 600);*/
  // delay(1000);
   //heightchangebackleg(-40);
  // heightchange1legonstep(1,40);
-  //while(true){}
+  while(true){}
 }
 
 void loop() {
+  for (int i=0;i< 10;i++){
   delay(7);
-  step4legs(false,5000); // технология 1х3
+  step4legs(false,700); // технология 1х3
+  }
+  for (int i=0;i< 10;i++){
+  delay(7);
+  step4legs(false,400); // технология 1х3
+  }
+  for (int i=0;i< 10;i++){
+  delay(7);
+  step4legs(false,200); // технология 1х3
+  }
   //stepalllegs(false,1000,0); // технология 2х2
 //move1Leg(false,30,80,40 ,5,6 , legspos[3][0], legspos[3][1],3);
   //if (gefromjosticdata.shouldRun())
