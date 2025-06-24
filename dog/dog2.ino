@@ -42,6 +42,7 @@ int L0 = 38;
 int L1 = 108;
 int L2 = 130;
 
+int Lbody = 280;
 //double homeX, homeZ;
 
 // Конфигурация сервоприводов
@@ -101,6 +102,11 @@ void processRemoteData(RemoteData data) {
   } else if (abs(data.leftX - 512) < 100 && abs(data.leftY - 512) < 100) {
     gohome();
   }
+  /*if (data.rightX < 400) {
+    step4legstoside(true, 30, 2000); // Влево
+  } else if (data.rightX > 600) {
+    step4legstoside(false, 30, 2000); // Вправо
+  }*/
 }
 
 void readRemoteData() {
@@ -291,6 +297,7 @@ bool moveToPoint(int leg,double targetX, double targetZ, int servnum1, int servn
   return false;
 }
 
+
 void stepalllegs(bool forward,int speed, int left){ // left ^ 0- forward, 1- left, 2- right
  /* if (left == 1 || left ==0 ){
     step2legs(forward,0,3, legspos[0][0], legspos[0][1], legspos[3][0], legspos[3][1], speed); //
@@ -435,13 +442,145 @@ void step4legs(bool forward, int STEP_DURATION, int len4step = 150) {
     }
 }
 
-void step1legtoside(bool left, int leg,int len){
+void step1legtoside(bool left, int leg,int len){  // work!!
   double ab = (left ? 1 : -1)*(atan(len/abs(legspos[leg][1])) + atan((L1+L2)/L0));
   Serial.println(ab);
   //double rad_ab = degrees(ab);
   double shoulder = realangleToPulse(degrees(ab), legs[leg][0][1], legs[leg][0][2]);// +(left ? 1 : -1)*legs[leg][0][3];
   Serial.println(shoulder);
   pwm1.setPWM(legs[leg][0][0], 0, shoulder);
+}
+void step4legstoside(bool left, int STEP_DURATION, int Rcentr = 500) {
+    int max_step = 120;//50 мм может шагнуть максимально в сторону
+
+    const int NUM_SECTIONS = 4;
+    const int STEPS_PER_SECTION = 10;
+    const float SECTION_DURATION = STEP_DURATION / (float)NUM_SECTIONS;
+    const float TIME_PER_STEP = SECTION_DURATION / STEPS_PER_SECTION;
+    float SECTION_LENGTH = max_step / (float)NUM_SECTIONS;
+
+    int active_leg = 0;
+    float start_positions[4][2]; // [0]-Y, [1]-Z
+
+    double Rbody = Rcentr + Lbody;
+    
+    // Ограничение угла поворота по максимально возможному смещению
+    double maxAngle = tan( max_step / Rbody) ;// *57.29577;
+    // Смещение для передних лап (меньший радиус)
+    double FShift = Rcentr * tan(maxAngle);
+    // Смещение для задних лап (больший радиус)
+    double RShift = max_step; 
+    Serial.println("[FR] ");
+    Serial.println(FShift);
+    Serial.println(RShift);
+
+    for (int section = 0; section < NUM_SECTIONS; section++) {
+        // Сохраняем стартовые позиции
+        for (int l = 0; l < 4; l++) {
+            start_positions[l][0] = legspos[l][3]; // Y
+            start_positions[l][1] = legspos[l][1]; // Z
+        }
+
+        for (int step = 0; step <= STEPS_PER_SECTION; step++) {
+            float t = (float)step / STEPS_PER_SECTION;
+
+            for (int l = 0; l < 4; l++) {
+                if (l == active_leg) {
+                  if (active_leg == 0 || active_leg == 1){
+                    SECTION_LENGTH = FShift / (float)NUM_SECTIONS;
+                  }else{
+                    SECTION_LENGTH = RShift / (float)NUM_SECTIONS;
+                  }
+
+                    // Траектория активной ноги (полуэллипс)
+                    float newY, newZ;
+                    if (left) {
+                        newY = start_positions[l][0] + SECTION_LENGTH * (1 - cos(PI * t));
+                    } else {
+                        newY = start_positions[l][0] - SECTION_LENGTH * (1 - cos(PI * t));
+                    }
+                    //newZ = start_positions[l][1] + STEP_HEIGHT * sin(PI * t);
+                    float H = start_positions[l][1];
+                    
+                    // Рассчитываем угол плеча
+                    float dy = abs(newY - start_positions[l][0]); 
+                    //float dz = newZ;
+
+
+                    float alfa = acos((H*H+H*H-dy*dy)/(2*H*H));
+                    float beta = (180-alfa)/2;
+                    float dz = sin(90 - beta) * dy; // высота по Z
+
+                    //float angle_rad = atan2(dy, dz);
+                    Serial.print("0 ");
+                    Serial.println(alfa*57.29577);
+                    float angle_deg = degrees((left ? -1 : 1)*alfa + 90/57.29577) ; // отклонение влево/вправо
+                    
+                    // Устанавливаем угол плеча
+                    int shoulderPulse = realangleToPulse(angle_deg, legs[l][0][1], legs[l][0][2]) ;
+                    Serial.print("shoulderPulse A ");
+                    Serial.println(shoulderPulse);
+                    
+                    pwm1.setPWM(legs[l][0][0], 0, shoulderPulse);
+
+                    if (step / STEPS_PER_SECTION >= 1/2){ // вторая часть пути должна идти вниз,чтоб получился полуэллипс
+                      moveToPoint(l ,legspos[l][0],legspos[l][1] - dz,legs[l][1][0],legs[l][2][0]);
+                      legspos[l][1] = legspos[l][1] - dz;
+                    }
+                    
+                    // Сохраняем временные позиции
+                    legspos[l][3] = newY;
+                                        
+                    delay(TIME_PER_STEP/(4));//*10));
+                } else {
+                    // Компенсация для опорных ног
+                    float compensation = (left ? -1 : 1) * SECTION_LENGTH * t / 3.0f;
+                    float newY = start_positions[l][0] + compensation;
+                    float H = start_positions[l][1];
+                    
+                    // Рассчитываем угол плеча
+                    float dy = abs(newY - start_positions[l][0]);
+
+                    float alfa = acos((H*H+H*H-dy*dy)/(2*H*H));
+
+                   // Serial.print("dy ");
+                    //Serial.println(dy);
+                    //float dz = start_positions[l][1];
+                    //float angle_rad = atan2(dy, dz);
+                    //Serial.print(" 1 ");
+                   // Serial.println(angle_rad*57.29577);
+                    float angle_deg = degrees((left ? 1 : -1)*alfa + 90/57.29577) ;
+                    //float angle_deg = degrees(angle_rad);
+                    
+                    // Устанавливаем угол плеча
+                    int shoulderPulse = realangleToPulse(angle_deg, legs[l][0][1], legs[l][0][2]);
+                    Serial.print("shoulderPulse ) ");
+                    Serial.println(shoulderPulse);
+                    pwm1.setPWM(legs[l][0][0], 0, shoulderPulse);
+                    
+                    delay(TIME_PER_STEP/4);
+                }
+            }
+        }
+
+        // Финализируем позиции после секции
+        for (int l = 0; l < 4; l++) {
+            if (l != active_leg) {
+                float compensation = (left ? -1 : 1) * SECTION_LENGTH / 3.0f;
+                legspos[l][3] = start_positions[l][0] + compensation;
+            }
+        }
+        //плавно надо вернуть все 3 лапы обратно!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        // Переключаем активную ногу
+        //active_leg = (active_leg + 1) % 4;
+        active_leg = changeleg(active_leg);
+    }
+    
+    // Возвращаем Z в исходное положение
+    //for (int l = 0; l < 4; l++) {
+    //    moveToPoint(l, legspos[l][0], start_positions[l][1], legs[l][1][0], legs[l][2][0]);
+    //}
 }
 
 void step2legs(bool forward, int legF, int legR, int homeX, int homeZ, int homeX1, int homeZ1, int STEP_DURATION) {
@@ -714,7 +853,8 @@ void setup() {
     forwardKinematics(leg,legs[leg][1][3], legs[leg][2][3], x, z);
     legspos[leg][0] = x;
     legspos[leg][1] = z;
-    Serial.print("X ");Serial.print(x);Serial.print(" Z ");Serial.println(z);
+    legspos[leg][3] = 0;
+    Serial.print("X ");Serial.print(x);Serial.print(" Y ");Serial.println(legspos[leg][3]);Serial.print(" Z ");Serial.println(z);
   }
   //pwm1.setPWM(13, 0, 495);
   //pwm1.setPWM(14, 0, 250);
@@ -755,10 +895,10 @@ pwm1.setPWM(4, 0, 600);*/
  // moveToPoint(1,-120, -170, 5,6);
  
  
-  //delay(1000);
+  delay(1000);
   //step1legtoside(true,0,160);
 
-
+step4legstoside(true, 6000); 
 
   //moveToPoint(1,-20, -170, 5,6);
   //move1Leg(false,5000,50,40 ,5,6 , legspos[1][0], legspos[1][1],1);
@@ -773,21 +913,20 @@ pwm1.setPWM(4, 0, 600);*/
  // delay(1000);
   //heightchangebackleg(-40);
  // heightchange1legonstep(1,40);
-  //while(true){}
+  while(true){}
 }
 
 void loop() {
 
-  float dist1 = getDistance(TRIG1, ECHO1);
+  /*float dist1 = getDistance(TRIG1, ECHO1);
   float dist2 = getDistance(TRIG2, ECHO2);
-  
   Serial.print("Left: ");
   Serial.print(dist1);
   Serial.print(" cm | Right: ");
   Serial.print(dist2);
   Serial.println(" cm");
   delay(200);
-
+*/
   /*for (int i=0;i< 10;i++){
   delay(7);
   step4legs(false,700); // технология 1х3
