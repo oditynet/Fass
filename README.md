@@ -1,8 +1,12 @@
-# FASS - PROJECT IN DEVELOPMENT
-
+### FASS 
 Robot on Arduino and servos with 2 degrees of freedom.
 
-# Theory:
+### Status 
+  **PROJECT IN DEVELOPMENT**
+
+The robot can now: walk forward and backward, lift 1 paw/2 paws/4 paws up, down, sideways, receive commands via radio from the remote control, understands the distance from lidars. An algorithm for turning in a circle is currently being developed.
+
+### Theory
 Forward and inverse kinematics:
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic.png" title="example" width="800" />
 
@@ -23,7 +27,7 @@ Inverse kinematics is to find angles (motor impulses) by X;Y coordinates. The gr
 The same kinematics is for the movement of the paw to the side for turning. turning. walking sideways. The task is to find the angle y_c and to what height to compensate for the paw lift to the height z_H
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic-side.png" title="example" width="800" />
 
-# Step theory:
+### Step theory:
 
 There are 2 types of steps in walking:
 
@@ -32,7 +36,7 @@ There are 2 types of steps in walking:
 
 In my project, the center of gravity is unstable, so I chose option 2.
 
-# HARDWARE LIST 
+### HARDWARE LIST 
  1) Сервопривод SPT5435LV 35 кг                - 12 шт
  2) Понижающий регулятор напряжения на 10А     - 1 шт
  3) Arduino nano                               - 2 шт
@@ -47,12 +51,11 @@ In my project, the center of gravity is unstable, so I chose option 2.
  12) LIPO 7.4V(ваш выбор) класс от 20С         - 2 шт
  13) болты и гайки M3                          - пакет на 100 шт
 
-# Electrochema
+### Electrochema
 
 <img src="https://github.com/oditynet/Fass/blob/main/electrochema.png" title="leg" width="800" />
 
-
-# Video
+### Video
   
 Here is a video of the old kinematics motion logic. The new one works very accurately and takes into account all possible states.
 
