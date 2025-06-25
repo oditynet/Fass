@@ -46,6 +46,13 @@ In my project, the center of gravity is unstable, so I chose option 2.
  11) NRF24L01                                  - 2 шт
  12) LIPO 7.4V(ваш выбор) класс от 20С         - 2 шт
  13) болты и гайки M3                          - пакет на 100 шт
+
+# Electrochema
+
+<img src="https://github.com/oditynet/Fass/blob/main/electrochema.png" title="leg" width="800" />
+
+
+# Video
   
 Here is a video of the old kinematics motion logic. The new one works very accurately and takes into account all possible states.
 
