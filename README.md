@@ -1,6 +1,3 @@
-![Social Preview](https://github.com/oditynet/Fass/blob/main/head.png)
-<meta property="og:image" content="https://github.com/oditynet/Fass/blob/main/head.png">
-
 ### FASS 
 Robot on Arduino and servos with 2 degrees of freedom.
 
