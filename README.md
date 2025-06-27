@@ -1,10 +1,5 @@
 ![Quadruped Project](dog/head.png)
 
-<p align="left">
- <img src="https://github.com/oditynet/Fass/blob/main/dog/head.png" width="100%" /> 
-</p>
-
-
 ### FASS 
 Robot on Arduino and servos with 2 degrees of freedom.
 
