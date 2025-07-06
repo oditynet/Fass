@@ -7,6 +7,7 @@ Robot on Arduino and servos with 2 degrees of freedom.
 The robot can now: walk forward and backward, lift 1 paw/2 paws/4 paws up, down, sideways, receive commands via radio from the remote control, understands the distance from lidars. An algorithm for turning in a circle is currently being developed.
 
 ### Theory
+(next information is very hard)
 Forward and inverse kinematics:
 <img src="https://github.com/oditynet/Fass/blob/main/dog/kinematic.png" title="example" width="800" />
 
